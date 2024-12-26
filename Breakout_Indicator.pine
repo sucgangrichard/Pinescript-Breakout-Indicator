@@ -1,0 +1,84 @@
+//@version=5
+indicator("EQL, EMA, & RSI Indicator", overlay=true)
+
+
+//====================================================================================================================
+// Input parameters
+length = input.int(14, title="Length")
+src = input(close, title="Source")
+
+// Calculate RSI
+rsi = ta.rsi(src, length)
+
+// Define overbought and oversold levels
+overbought = 70
+oversold = 30
+
+// Identify reversal patterns
+bullishReversal = ta.crossover(rsi, oversold)
+bearishReversal = ta.crossunder(rsi, overbought)
+
+// Plot signals on the chart
+plotshape(series=bullishReversal, location=location.belowbar, color=color.green, style=shape.triangleup, text="BUY", textcolor=color.green)
+plotshape(series=bearishReversal, location=location.abovebar, color=color.red, style=shape.triangledown, text="SELL", textcolor=color.red)
+
+// Generate alerts
+alertcondition(bullishReversal, title="Bullish Reversal", message="Bullish Reversal: Buy Signal")
+alertcondition(bearishReversal, title="Bearish Reversal", message="Bearish Reversal: Sell Signal")
+
+//====================================================================================================================
+
+// Calculate and plot 200 EMA
+ema200 = ta.ema(src, 200)
+plot(ema200, title="200 EMA", color=#3cff00)
+
+//====================================================================================================================
+
+pivotLength = input.int(4, 'Pivot Length', minval = 1, group = 'Settings')
+confluenceAtrLength = input.int(200, 'ATR Length to calculate threshold', minval = 1, group = 'Settings')
+threshold = input.float(0.10, 'Threshold', minval = 0, maxval = 1, step = 0.1, group = 'Settings')
+waitForConfirmation = input.bool(true, 'Wait For Confirmation', group = 'Settings')
+
+atr = ta.atr(confluenceAtrLength)
+
+ph = ta.pivothigh(pivotLength, 1)
+pl = ta.pivotlow(pivotLength, 1)
+
+if waitForConfirmation
+    ph := ta.pivothigh(pivotLength, pivotLength)
+    pl := ta.pivotlow(pivotLength, pivotLength)
+    pl
+
+var previousHigh = 0.
+var highLocX = 0
+
+if bool(ph)
+    max = math.max(ph, previousHigh)
+    min = math.min(ph, previousHigh)
+
+    if max < min + atr * threshold
+        drawHighLine = line.new(highLocX, previousHigh, waitForConfirmation ? bar_index - pivotLength : bar_index - 1, ph, color = color.red, style = line.style_solid)
+        drawHighLabel = label.new(int(math.avg(waitForConfirmation ? bar_index - pivotLength : bar_index - 1, highLocX)), ph, 'EQH', color = #00000000, textcolor = color.white, style = label.style_label_down, size = size.small)
+        drawHighLabel
+
+    previousHigh := ph
+    highLocX := waitForConfirmation ? bar_index - pivotLength : bar_index - 1
+    highLocX
+
+var previousLow = 0.
+var lowLocX = 0
+
+if bool(pl)
+    max = math.max(pl, previousLow)
+    min = math.min(pl, previousLow)
+
+    if min > max - atr * threshold
+        drawLowLine = line.new(lowLocX, previousLow, waitForConfirmation ? bar_index - pivotLength : bar_index - 1, pl, color = color.green, style = line.style_solid)
+        drawLowLabel = label.new(int(math.avg(waitForConfirmation ? bar_index - pivotLength : bar_index - 1, lowLocX)), pl, 'EQL', color = #00000000, textcolor = color.white, style = label.style_label_up, size = size.small)
+        drawLowLabel
+
+    previousLow := pl
+    lowLocX := waitForConfirmation ? bar_index - pivotLength : bar_index - 1
+
+    //====================================================================================================================
+    
